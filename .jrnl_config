@@ -1,0 +1,14 @@
+{
+  "default_hour": 21,
+  "linewrap": 120,
+  "encrypt": false,
+  "default_minute": 0,
+  "tagsymbols": "@",
+  "editor": "/usr/local/bin/choc",
+  "timeformat": "%Y-%m-%d %H:%M", 
+  "highlight": true, 
+  "journals": {
+    "default": "~/Dropbox/Text/Journal/journal.txt", 
+    "dayone": "~/Dropbox/Apps/Day One/Journal.dayone"
+  }
+}

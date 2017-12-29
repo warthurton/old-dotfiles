@@ -1,0 +1,10 @@
+#!/bin/bash
+[[ $# -ne 1 ]] && exit 0
+
+PROCESS=$1
+number=$(ps aux | grep -i $PROCESS | grep -v $0 | grep -v grep | wc -l)
+
+if [ $number -eq 0 ]
+    then
+      open $1
+fi

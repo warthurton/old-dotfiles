@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# --------------------------------------------------------------------------
+umask 022
+
+export BROWSER=open
+export EDITOR=vim
+export VISUAL=vim
+export PAGER=less
+export LSCOLORS="Gxfxcxdxbxegedabagacad"
+export LESS="iRQXF"
+export GREP_OPTIONS='--color=auto'
+export HISTSIZE=100000
+
+command -v ag >/dev/null 2>/dev/null && export FZF_DEFAULT_COMMAND='ag -l -g ""'
+
+# --------------------------------------------------------------------------
+# ruby
+
+if [[ ! -d "$HOME/.rvm/bin" ]] ; then
+  if [[ -d "/usr/local/opt/rbenv/bin" ]] ; then
+    export RBENV_ROOT="/usr/local/opt/rbenv"
+  elif [[ -d "$HOME/.rbenv/bin" ]] ; then
+    export RBENV_ROOT="$HOME/.rbenv"
+  fi
+fi
+# --------------------------------------------------------------------------
+
+for dir in \
+  /{bin,sbin} \
+  /{usr,opt}/{bin,sbin} \
+  /{usr,opt}/{local,X11}/{bin,sbin} \
+  /{usr,opt}/local/heroku/bin \
+  /Applications/VMware\ Fusion.app/Contents/Library \
+  /Applications/Postgres.app/Contents/Versions/9.4/bin \
+  $HOME/bin \
+  $HOME/.linuxbrew/bin \
+  $RBENV_ROOT/bin \
+  $HOME/.rvm/bin
+do
+  if [[ -d "$dir" && ! $PATH =~ ^${dir}: && ! $PATH =~ :${dir}$ && ! $PATH =~ :${dir}: ]] ; then
+    export PATH="$PATH:${dir}"
+  fi
+done
+
+# --------------------------------------------------------------------------
+# ruby, prefer rvm over rbenv
+
+if [[ -d "$HOME/.rvm/bin" ]] ; then
+  source "$HOME/.rvm/scripts/rvm"
+elif [[ -n $RBENV_ROOT ]] ; then
+  if [[ -n $ZSH_VERSION ]] ; then
+    eval "$(rbenv init - zsh)"
+  else
+    eval "$(rbenv init -)"
+  fi
+fi
+# --------------------------------------------------------------------------
+# Synology NAS
+
+[[ -d "/usr/syno" ]] && export TERM=${TERM:-cons25}
+
+# --------------------------------------------------------------------------
+# gpg-agent, only for linux, on OS X use gpgtools instead
+
+if [[ "${OSTYPE:0:5}" = "linux" ]] ; then
+  if command -v gpg-agent >/dev/null 2>/dev/null ; then
+    __gai="$HOME/.gnupg/gpg-agent-info"
+
+    [[ -z "$GPG_AGENT_INFO" ]] && [[ -f "$__gai" ]] && source "$__gai"
+
+    [[ -n "$GPG_AGENT_INFO" && -S $(echo "$GPG_AGENT_INFO" | cut -f 1 -d :) ]] || unset GPG_AGENT_INFO
+
+    [[ -z "$GPG_AGENT_INFO" ]] && eval "$(gpg-agent --daemon --write-env-file "$__gai")"
+
+    [[ -n "$GPG_AGENT_INFO" ]] && [[ -S $(echo "$GPG_AGENT_INFO" | cut -f 1 -d :) ]] && export GPG_AGENT_INFO
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# ssh-agent, only for OS X
+
+if [[ -z _SSH_MAJOR_VER && -z _SSH_MINOR_VER ]] ; then
+  if command -v ssh >/dev/null 2>/dev/null ; then
+    declare -i _SSH_MAJOR_VER
+    declare -i _SSH_MINOR_VER
+    read _SSH_MAJOR_VER _SSH_MINOR_VER < <(ssh -V 2>&1 | sed -e 's/^[a-zA-Z]*_\([1-9][0-9]*\)\.\([0-9][0-9]*\).*$/\1 \2/')
+    export _SSH_MAJOR_VER _SSH_MINOR_VER
+  fi
+fi
+
+if [[ "${OSTYPE:0:6}" = "darwin" && -n _SSH_MAJOR_VER && -n _SSH_MINOR_VER && -n $SSH_AUTH_SOCK && -S $SSH_AUTH_SOCK ]] ; then
+  if (( (_SSH_MAJOR_VER = 6 && _SSH_MINOR_VER >= 6) || _SSH_MAJOR_VER >= 7 )) ; then
+    ssh-add -m -M >&/dev/null
+  elif (( _SSH_MAJOR_VER = 6 && _SSH_MINOR_VER < 6 )) ; then
+    ssh-add -A -K >&/dev/null
+  fi
+fi
+
+if [[ -n "$SSH_AUTH_SOCK" && ! -S "$SSH_AUTH_SOCK" ]] ; then
+  declare SSH_AUTH_SOCK
+  SSH_AUTH_SOCK=$(find /tmp/ssh-* -type s | head -1)
+  export SSH_AUTH_SOCK
+fi
+
+# --------------------------------------------------------------------------
+[[ -z "$PS1" ]] && return
+
+BASE16_SHELL="$HOME/.config/base16-shell/base16-twilight.dark.sh"
+[[ -s "$BASE16_SHELL" ]] && source "$BASE16_SHELL"
+
+# --------------------------------------------------------------------------
+# vim: set syntax=sh ft=sh sw=2 ts=2 expandtab:
